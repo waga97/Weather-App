@@ -1,108 +1,99 @@
-Weather App
-This is a single-page application built with Vue 3 and Vuex, focusing on robust client-side state management and data persistence using local and session storage.
+# Weather App  
 
-Getting Started
-To run this project locally, follow these simple steps:
+This is a single-page application built with **Vue 3** and **Vuex**, focusing on robust client-side state management and data persistence using `localStorage` and `sessionStorage`.
 
-Install dependencies:
+---
 
+## Getting Started
+
+To run this project locally:
+
+### 1. Install dependencies
+```bash
 pnpm i
+```
 
-Run the development server:
-
+### 2. Run the development server
+```bash
 pnpm dev
+```
 
-Application Architecture
-This application strictly separates concerns, ensuring that complex data handling is isolated in dedicated service layers.
+---
 
-1. Data Persistence Strategy
-   Data persistence is crucial for a smooth user experience. We utilize the browser's Web Storage APIs:
+## Application Architecture
 
-Data Type
+This application strictly separates concerns, ensuring that complex data handling is isolated in dedicated **service layers**.
 
-Storage Mechanism
+---
 
-Purpose
+### 1. Data Persistence Strategy
 
-User Profile
+Data persistence is crucial for a smooth user experience.  
+We utilize the browser’s **Web Storage APIs**:
 
-localStorage
+| **Data Type**     | **Storage Mechanism** | **Purpose** |
+|--------------------|-----------------------|-------------|
+| User Profile       | `localStorage`        | Persists user name, email, and phone across browser sessions and refreshes. |
+| Saved Capitals     | `localStorage`        | Persists user-added capital cities across browser sessions. |
+| User Location      | `sessionStorage`      | Stores the user’s detected location (city/country) only for the current browsing session to ensure freshness. |
 
-Persists user name, email, and phone across browser sessions and refreshes.
+---
 
-Saved Capitals
+### 2. State Hydration 
 
-localStorage
+The key to preventing data loss on refresh is **synchronous state hydration** in Vuex:
 
-Persists user-added capital cities across browser sessions.
+- **Service Layer Responsibility**  
+  `userService` and `capitalService` modules contain synchronous methods (`getInitialProfile()` and `getInitialCapitals()`) that immediately load persisted data from `localStorage` on file execution.
 
-User Location
+- **Vuex Responsibility**  
+  The `state()` function in `store/modules/user.ts` calls these synchronous methods, ensuring state is never initialized as empty if previous data exists.  
 
-sessionStorage
+---
 
-Stores the user's detected location (city/country) only for the current browsing session. This ensures the "My Location" marker is fresh.
+### 3. Profile Flow (`store/modules/user.ts`)
 
-2. State Hydration (The "Profile is Gone" Fix)
-   The key to preventing data loss on refresh is synchronous state hydration in Vuex:
+| **Action/State** | **Description** | **Persistence Handled By** |
+|-------------------|-----------------|-----------------------------|
+| `state()` | Profile is immediately loaded from `localStorage` via `userService.getInitialProfile()`. | `userService.ts` |
+| `updateProfile` | Dispatches the action with new form data. Calls `userService.updateProfile()`. | `userService.ts` (saves to `localStorage` after update) |
+| `fetchProfile` | Remains available for async loading or error handling (not strictly needed for persistence). | N/A |
 
-Service Layer Responsibility: The userService and capitalService modules now contain synchronous methods (getInitialProfile() and getInitialCapitals()) that immediately load persisted data from localStorage upon file execution.
+---
 
-Vuex Responsibility: The state() function in store/modules/user.ts calls these synchronous methods. This ensures the Vuex state is never initialized as empty (undefined or '') if previous data exists, eliminating the "blank screen flicker."
+### 4. Capital Flow (`store/modules/user.ts`)
 
-3. Profile Flow (store/modules/user.ts)
-   Action/State
+Capitals data handling is standardized, with complex logic delegated to the **service layer**:
 
-Description
+| **Action/State** | **Description** | **Core Logic Handled By** |
+|-------------------|-----------------|----------------------------|
+| `state()` | Capitals list is immediately loaded from `localStorage` via `capitalService.getInitialCapitals()`. | `capitalService.ts` |
+| `fetchCapitals` | 1. Runs `detectAndSaveMyLocation()` (saves current city/country to `sessionStorage`). <br> 2. Calls `capitalService.getCapitals()`. | `capitalService.ts` (merges user location with saved capitals) |
+| `SET_CAPITALS` | Simple state setter. Receives list already merged/saved by service. | N/A |
 
-Persistence Handled By
+---
 
-state()
+### 5. Manual Session Clear
 
-Profile is immediately loaded from localStorage via userService.getInitialProfile().
+- If `sessionStorage` is cleared manually,  
+  ➝ `fetchCapitals` will **re-run `detectAndSaveMyLocation()`**, restoring the user’s current location on the next load.
 
-userService.ts
+---
 
-updateProfile
+## Summary
 
-Dispatches the action with new form data. Calls userService.updateProfile().
+- **Profiles** persist across sessions with `localStorage`.  
+- **Capitals** are merged with the user’s **current location**, saved to `sessionStorage`.  
+- **Vuex state hydration** prevents flicker and ensures smooth reloads.  
+- Clear separation of **Vuex (state management)** and **services (persistence logic)**.  
 
-userService.ts (saves to localStorage after update)
+---
 
-fetchProfile
 
-Remains available for initial asynchronous loading or error handling, but is not strictly necessary for persistence.
+## Tech Stack
 
-N/A
-
-4. Capital Flow (store/modules/user.ts)
-   Capitals data handling is standardized and complex logic is handled within the service:
-
-Action/State
-
-Description
-
-Core Logic Handled By
-
-state()
-
-Capitals list is immediately loaded from localStorage via capitalService.getInitialCapitals().
-
-capitalService.ts
-
-fetchCapitals
-
-1. await detectAndSaveMyLocation(): This critical step ensures the user's current city/country is saved to sessionStorage. 2. Calls capitalService.getCapitals().
-
-capitalService.ts (handles merging user location with saved capitals)
-
-SET_CAPITALS
-
-The mutation is now a simple state setter. It receives the list already merged and saved by the service layer.
-
-N/A
-
-Manual Session Clear
-
-If sessionStorage is manually cleared, fetchCapitals will automatically re-run detectAndSaveMyLocation(), restoring the current location on the next load.
-
-fetchCapitals action
+- [Vue 3](https://vuejs.org/)  
+- [Vuex](https://vuex.vuejs.org/)  
+- [PNPM](https://pnpm.io/)  
+- [Weather API - Open Meteo](https://open-meteo.com/)  
+ 
